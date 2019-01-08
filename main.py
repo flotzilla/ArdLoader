@@ -53,9 +53,26 @@ class Main:
 
     def get_os_specific_stats(self):
         if platform.system() == 'Windows':
-            # w = wmi.WMI()
-            # print(w.Win32_TemperatureProbe())
-            # temperature_info = w.MSAcpi_ThermalZoneTemperature()[0]
+            w = wmi.WMI()
+            # for el in w.Win32_TemperatureProbe():
+            #     print(el)
+            # #
+            # for el in w.Win32_VideoController():
+            #     print(el)
+            #
+            # for el in w.Win32_Processor():
+            #     print(el)
+
+            # for el in w.CIM_TemperatureSensor ():
+            #     print(el)
+            #
+            # for el in w.Win32_Fan():
+            #     print(el)
+
+            for el in w.Win32_MotherboardDevice   ():
+                print(el)
+
+            # temperature_info = w.MSAcpi_ThermalZoneTemperature()
             # print(temperature_info.CurrentTemperature)
             pass
         else:
@@ -106,16 +123,16 @@ if __name__ == "__main__":
 
     main.get_os_specific_stats()
 
-    if main.connect():
-        # main.send_to_aruduino('cpu_cont', main.cpu_count_real)
-        # main.send_to_aruduino('cpu_real', main.cpu_count)
-
-        while True:
-            main.get_stats()
-            main.get_time()
-            main.send_to_aruduino('cpu_stat', main.cpu_stats)
-            main.send_to_aruduino('mem_stat', main.mem_stats)
-            main.send_to_aruduino('current_time', main.current_time)
-            main.send_to_aruduino('uptime', main.uptime)
-            main.send_to_aruduino('curr_day', main.day)
-            time.sleep(timeout_send)
+    # if main.connect():
+    #     # main.send_to_aruduino('cpu_cont', main.cpu_count_real)
+    #     # main.send_to_aruduino('cpu_real', main.cpu_count)
+    #
+    #     while True:
+    #         main.get_stats()
+    #         main.get_time()
+    #         main.send_to_aruduino('cpu_stat', main.cpu_stats)
+    #         main.send_to_aruduino('mem_stat', main.mem_stats)
+    #         main.send_to_aruduino('current_time', main.current_time)
+    #         main.send_to_aruduino('uptime', main.uptime)
+    #         main.send_to_aruduino('curr_day', main.day)
+    #         time.sleep(timeout_send)
