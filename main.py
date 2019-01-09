@@ -102,14 +102,14 @@ class Main:
     def get_gpu_stats(self):
         self.gpu_devices.clear()
         if self.is_amd_card:
-            import AmdVideoCard
+            from gpu import AmdVideoCard
             amdCards = AmdVideoCard.AmdVideoCard.get_stats()
             self.gpu_devices.extend(amdCards)
         if self.is_nvidia_card:
-            # TODO handle this
+            # TODO.md handle this
             pass
         if self.is_intel_card:
-            # TODO handle this
+            # TODO.md handle this
             pass
 
     def connect(self):

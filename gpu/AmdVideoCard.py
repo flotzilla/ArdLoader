@@ -1,5 +1,5 @@
 from pyadl import *
-import GpuDevice
+from gpu import GpuDevice
 
 
 class AmdVideoCard:
