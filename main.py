@@ -1,16 +1,18 @@
+import sys
 from datetime import datetime
-
+from pyadl import *
 import psutil
 import serial
 import time
 import math
 import platform
+import GpuDevice
 
 if platform.system() == 'Windows':
     import wmi
 
-arduino_port = 'COM11' # change it to your /dev/ttyACM[port] or /dev/ttyUSB[port] for linux or COM[port] for windows
-timeout_readings = 1 # fix this
+arduino_port = 'COM11'  # change it to your /dev/ttyACM[port] or /dev/ttyUSB[port] for linux or COM[port] for windows
+timeout_readings = 1  # fix this
 timeout_send = 0.01
 time_format = "%H:%M %d/%m/%Y"
 
@@ -25,6 +27,8 @@ class Main:
 
         self.startup_time = time.strftime(time_format, time.localtime(psutil.boot_time()))
         self.current_time = self.uptime = self.day = None
+        self.sensors = self.cpu_fan = None
+        self.amd_gpu_devices = []
 
     @staticmethod
     def convert_size(size_bytes):
@@ -56,28 +60,58 @@ class Main:
             w = wmi.WMI()
             # for el in w.Win32_TemperatureProbe():
             #     print(el)
-            # #
+            #
             # for el in w.Win32_VideoController():
             #     print(el)
             #
             # for el in w.Win32_Processor():
             #     print(el)
-
-            # for el in w.CIM_TemperatureSensor ():
+            #
+            # for el in w.CIM_TemperatureSensor():
             #     print(el)
             #
             # for el in w.Win32_Fan():
             #     print(el)
 
-            for el in w.Win32_MotherboardDevice   ():
-                print(el)
+            w2 = wmi.WMI(namespace="root\\wmi")
+            try:
+                temperature_info = w2.MSAcpi_ThermalZoneTemperature()
+                print(temperature_info.CurrentTemperature)
+            except wmi.x_wmi as wmi_e:
+                print("Sorry, cannot handle wmi on this machine")
+                print(wmi_e.com_error)
+            except:
+                print(sys.exc_info())
 
-            # temperature_info = w.MSAcpi_ThermalZoneTemperature()
-            # print(temperature_info.CurrentTemperature)
-            pass
         else:
-            # psutil.sensors_temperatures()
+            sensors = psutil.sensors_temperatures()
+            cpu_fan = psutil.sensors_fans()
             pass
+
+    def get_gpu_stats(self):
+        self.amd_gpu_devices.clear()
+        for el in ADLManager.getInstance().getDevices():
+            device = GpuDevice.GpuDevice()
+            device.device_name = str(el.adapterName)
+            device.adapterIndex = str(el.adapterIndex)
+            core_freq_min, core_freq_max = el.getEngineClockRange()
+            device.eng_clock = str(el.getCurrentEngineClock()) + "/" + str(core_freq_max) + "Mhz"
+
+            device.currtemp = str(el.getCurrentTemperature()) + "C"
+
+            mem_freq_min, mem_freq_max = el.getMemoryClockRange()
+            device.mem_clock = str(el.getCurrentMemoryClock()) + "/" + str(mem_freq_max) + "Mhz"
+
+            device.usage = str(el.getCurrentUsage()) + "%"
+
+            fan_speed_percent_min, fan_speed_percent_max = el.getFanSpeedRange(ADL_DEVICE_FAN_SPEED_TYPE_PERCENTAGE)
+            device.fan_speed_percent = str(el.getCurrentFanSpeed(ADL_DEVICE_FAN_SPEED_TYPE_PERCENTAGE)) + "%"
+
+            fan_speed_rpm_min, fan_speed_rpm_max = el.fanSpeedRPMRange
+            device.fan_speed_rpm = str(el.getCurrentFanSpeed(ADL_DEVICE_FAN_SPEED_TYPE_RPM)) \
+                                   + "/" + str(fan_speed_rpm_max) + "RPM"
+
+            self.amd_gpu_devices.append(device)
 
     def connect(self):
         try:
@@ -109,6 +143,8 @@ if __name__ == "__main__":
     main = Main()
     main.get_stats()
     main.get_time()
+    main.get_os_specific_stats()
+    main.get_gpu_stats()
 
     print("Starting up...\r\n")
 
@@ -119,20 +155,31 @@ if __name__ == "__main__":
     print("Current time " + main.current_time)
     print("Uptime " + main.uptime)
     print("Day " + main.day)
+
+    if len(main.amd_gpu_devices) != 0:
+        for device in main.amd_gpu_devices:
+            print("")
+            print(device.adapterIndex + ": " + device.device_name)
+            print("Fan load: " + device.fan_speed_percent)
+            print("Fan rpm: " + device.fan_speed_rpm)
+            print("Engine clock: " + device.eng_clock)
+            print("Memory clock: " + device.mem_clock)
+            print("Temperature: " + device.currtemp)
+            print("Usage: " + device.usage)
+
     print("\r\n Sending information to device...")
 
-    main.get_os_specific_stats()
-
     # if main.connect():
-    #     # main.send_to_aruduino('cpu_cont', main.cpu_count_real)
-    #     # main.send_to_aruduino('cpu_real', main.cpu_count)
-    #
-    #     while True:
-    #         main.get_stats()
-    #         main.get_time()
-    #         main.send_to_aruduino('cpu_stat', main.cpu_stats)
-    #         main.send_to_aruduino('mem_stat', main.mem_stats)
-    #         main.send_to_aruduino('current_time', main.current_time)
-    #         main.send_to_aruduino('uptime', main.uptime)
-    #         main.send_to_aruduino('curr_day', main.day)
-    #         time.sleep(timeout_send)
+    # main.send_to_aruduino('cpu_cont', main.cpu_count_real)
+    # main.send_to_aruduino('cpu_real', main.cpu_count)
+
+    # while True:
+    #     main.get_stats()
+    #     main.get_time()
+    #     main.get_gpu_stats()
+    #     main.send_to_aruduino('cpu_stat', main.cpu_stats)
+    #     main.send_to_aruduino('mem_stat', main.mem_stats)
+    #     main.send_to_aruduino('current_time', main.current_time)
+    #     main.send_to_aruduino('uptime', main.uptime)
+    #     main.send_to_aruduino('curr_day', main.day)
+    #     time.sleep(timeout_send)
