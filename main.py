@@ -14,7 +14,7 @@ timeout_readings = 1  # fix this
 timeout_send = 0.01
 time_format = "%H:%M %d/%m/%Y"
 
-amd_names = ['AMD', 'Advanced micro devices', 'Radeon']
+amd_names = ['AMD', 'Advanced micro devices', 'Advanced Micro Devices, Inc.', 'Radeon']
 nvidia_names = ['Nvidia']
 intel_names = ['Intel Corporation', 'Intel']
 
@@ -77,11 +77,11 @@ class Main:
             #     print(el)
 
             for el in w.CIM_PCVideoController():
-                if el.AdapterCompatibility in amd_names:
+                if any(el.AdapterCompatibility in s for s in amd_names):
                     self.is_amd_card = True
-                if el.AdapterCompatibility in nvidia_names:
+                if any(el.AdapterCompatibility in s for s in nvidia_names):
                     self.is_nvidia_card = True
-                if el.AdapterCompatibility in intel_names:
+                if any(el.AdapterCompatibility in s for s in intel_names):
                     self.is_intel_card = True
 
             w2 = wmi.WMI(namespace="root\\wmi")

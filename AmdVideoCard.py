@@ -29,3 +29,4 @@ class AmdVideoCard:
                                    + "/" + str(fan_speed_rpm_max) + "RPM"
 
             devices.append(device)
+        return devices
