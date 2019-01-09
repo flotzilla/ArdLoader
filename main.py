@@ -1,12 +1,10 @@
-import sys
 from datetime import datetime
-from pyadl import *
+import sys
 import psutil
 import serial
 import time
 import math
 import platform
-import GpuDevice
 
 if platform.system() == 'Windows':
     import wmi
@@ -16,6 +14,10 @@ timeout_readings = 1  # fix this
 timeout_send = 0.01
 time_format = "%H:%M %d/%m/%Y"
 
+amd_names = ['AMD', 'Advanced micro devices', 'Radeon']
+nvidia_names = ['Nvidia']
+intel_names = ['Intel Corporation', 'Intel']
+
 
 class Main:
 
@@ -24,11 +26,12 @@ class Main:
         self.cpu_count_real = psutil.cpu_count(False)
         self.cpu_count = psutil.cpu_count()
         self.connection = None
+        self.is_amd_card = self.is_nvidia_card = self.is_intel_card = False
 
         self.startup_time = time.strftime(time_format, time.localtime(psutil.boot_time()))
         self.current_time = self.uptime = self.day = None
         self.sensors = self.cpu_fan = None
-        self.amd_gpu_devices = []
+        self.gpu_devices = []
 
     @staticmethod
     def convert_size(size_bytes):
@@ -53,7 +56,7 @@ class Main:
         self.mem_stats = Main.convert_size(mem_stats.total) + "," \
                          + Main.convert_size(mem_stats.used) + "," \
                          + Main.convert_size(mem_stats.free) + "," \
-                         + str(100.0 - mem_stats.percent) + "%"
+                         + str(round(100.0 - mem_stats.percent, 2)) + "%"
 
     def get_os_specific_stats(self):
         if platform.system() == 'Windows':
@@ -69,9 +72,17 @@ class Main:
             #
             # for el in w.CIM_TemperatureSensor():
             #     print(el)
-            #
+
             # for el in w.Win32_Fan():
             #     print(el)
+
+            for el in w.CIM_PCVideoController():
+                if el.AdapterCompatibility in amd_names:
+                    self.is_amd_card = True
+                if el.AdapterCompatibility in nvidia_names:
+                    self.is_nvidia_card = True
+                if el.AdapterCompatibility in intel_names:
+                    self.is_intel_card = True
 
             w2 = wmi.WMI(namespace="root\\wmi")
             try:
@@ -89,29 +100,17 @@ class Main:
             pass
 
     def get_gpu_stats(self):
-        self.amd_gpu_devices.clear()
-        for el in ADLManager.getInstance().getDevices():
-            device = GpuDevice.GpuDevice()
-            device.device_name = str(el.adapterName)
-            device.adapterIndex = str(el.adapterIndex)
-            core_freq_min, core_freq_max = el.getEngineClockRange()
-            device.eng_clock = str(el.getCurrentEngineClock()) + "/" + str(core_freq_max) + "Mhz"
-
-            device.currtemp = str(el.getCurrentTemperature()) + "C"
-
-            mem_freq_min, mem_freq_max = el.getMemoryClockRange()
-            device.mem_clock = str(el.getCurrentMemoryClock()) + "/" + str(mem_freq_max) + "Mhz"
-
-            device.usage = str(el.getCurrentUsage()) + "%"
-
-            fan_speed_percent_min, fan_speed_percent_max = el.getFanSpeedRange(ADL_DEVICE_FAN_SPEED_TYPE_PERCENTAGE)
-            device.fan_speed_percent = str(el.getCurrentFanSpeed(ADL_DEVICE_FAN_SPEED_TYPE_PERCENTAGE)) + "%"
-
-            fan_speed_rpm_min, fan_speed_rpm_max = el.fanSpeedRPMRange
-            device.fan_speed_rpm = str(el.getCurrentFanSpeed(ADL_DEVICE_FAN_SPEED_TYPE_RPM)) \
-                                   + "/" + str(fan_speed_rpm_max) + "RPM"
-
-            self.amd_gpu_devices.append(device)
+        self.gpu_devices.clear()
+        if self.is_amd_card:
+            import AmdVideoCard
+            amdCards = AmdVideoCard.AmdVideoCard.get_stats()
+            self.gpu_devices.extend(amdCards)
+        if self.is_nvidia_card:
+            # TODO handle this
+            pass
+        if self.is_intel_card:
+            # TODO handle this
+            pass
 
     def connect(self):
         try:
@@ -156,8 +155,8 @@ if __name__ == "__main__":
     print("Uptime " + main.uptime)
     print("Day " + main.day)
 
-    if len(main.amd_gpu_devices) != 0:
-        for device in main.amd_gpu_devices:
+    if len(main.gpu_devices) != 0:
+        for device in main.gpu_devices:
             print("")
             print(device.adapterIndex + ": " + device.device_name)
             print("Fan load: " + device.fan_speed_percent)
