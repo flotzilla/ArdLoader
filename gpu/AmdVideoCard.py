@@ -9,15 +9,14 @@ class AmdVideoCard:
         devices = []
         for el in ADLManager.getInstance().getDevices():
             device = GpuDevice.GpuDevice()
-            device.device_name = str(el.adapterName)
-            device.adapterIndex = str(el.adapterIndex)
+            device.device_name = el.adapterName.decode()
             core_freq_min, core_freq_max = el.getEngineClockRange()
-            device.eng_clock = str(el.getCurrentEngineClock()) + "/" + str(core_freq_max) + "Mhz"
+            device.eng_clock = str(int(el.getCurrentEngineClock())) + "/" + str(int(core_freq_max)) + "Mhz"
 
-            device.currtemp = str(el.getCurrentTemperature()) + "C"
+            device.currtemp = str(int(el.getCurrentTemperature())) + "C"
 
             mem_freq_min, mem_freq_max = el.getMemoryClockRange()
-            device.mem_clock = str(el.getCurrentMemoryClock()) + "/" + str(mem_freq_max) + "Mhz"
+            device.mem_clock = str(int(el.getCurrentMemoryClock())) + "/" + str(int(mem_freq_max)) + "Mhz"
 
             device.usage = str(el.getCurrentUsage()) + "%"
 

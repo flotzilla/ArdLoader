@@ -6,12 +6,14 @@ import time
 import math
 import platform
 
+from gpu.GpuDevice import GpuDevice
+
 if platform.system() == 'Windows':
     import wmi
 
 arduino_port = 'COM11'  # change it to your /dev/ttyACM[port] or /dev/ttyUSB[port] for linux or COM[port] for windows
 timeout_readings = 1  # fix this
-timeout_send = 0.01
+timeout_send = .9  # optimal usage of delay for sending to serial port
 time_format = "%H:%M %d/%m/%Y"
 
 amd_names = ['AMD', 'Advanced micro devices', 'Advanced Micro Devices, Inc.', 'Radeon']
@@ -19,7 +21,7 @@ nvidia_names = ['Nvidia']
 intel_names = ['Intel Corporation', 'Intel']
 
 
-class Main:
+class PCMetric:
 
     def __init__(self) -> None:
         self.mem_stats = self.cpu_stats_total = self.trimmed_stats = None
@@ -31,7 +33,10 @@ class Main:
         self.startup_time = time.strftime(time_format, time.localtime(psutil.boot_time()))
         self.current_time = self.uptime = self.day = None
         self.sensors = self.cpu_fan = None
-        self.gpu_devices = []
+
+        self.gpu_devices: [GpuDevice] = []
+        self.video_controllers = []
+        self.video_controllers_count = 0
 
     @staticmethod
     def convert_size(size_bytes):
@@ -43,7 +48,7 @@ class Main:
         s = round(size_bytes / p, 2)
         return "%s%s" % (s, size_name[i])
 
-    def get_stats(self):
+    def get_cpu_mem_stats(self):
         self.trimmed_stats = ""
         cpu_stats = psutil.cpu_percent(interval=timeout_readings, percpu=True)
         for stat in cpu_stats:
@@ -53,9 +58,9 @@ class Main:
         self.trimmed_stats += str(average) + "%"
 
         mem_stats = psutil.virtual_memory()
-        self.mem_stats = Main.convert_size(mem_stats.total) + "," \
-                         + Main.convert_size(mem_stats.used) + "," \
-                         + Main.convert_size(mem_stats.free) + "," \
+        self.mem_stats = PCMetric.convert_size(mem_stats.total) + "," \
+                         + PCMetric.convert_size(mem_stats.used) + "," \
+                         + PCMetric.convert_size(mem_stats.free) + "," \
                          + str(round(mem_stats.percent, 2)) + "%"
 
     def get_os_specific_stats(self):
@@ -63,9 +68,10 @@ class Main:
             w = wmi.WMI()
             # for el in w.Win32_TemperatureProbe():
             #     print(el)
-            #
-            # for el in w.Win32_VideoController():
-            #     print(el)
+
+            self.video_controllers = w.Win32_VideoController()
+            self.video_controllers_count = len(self.video_controllers)
+
             #
             # for el in w.Win32_Processor():
             #     print(el)
@@ -103,8 +109,7 @@ class Main:
         self.gpu_devices.clear()
         if self.is_amd_card:
             from gpu import AmdVideoCard
-            amdCards = AmdVideoCard.AmdVideoCard.get_stats()
-            self.gpu_devices.extend(amdCards)
+            self.gpu_devices.extend(AmdVideoCard.AmdVideoCard.get_stats())
         if self.is_nvidia_card:
             # TODO.md handle this
             pass
@@ -114,12 +119,14 @@ class Main:
 
     def connect(self):
         try:
-            self.connection = serial.Serial(arduino_port, 115200, timeout=0)
+            self.connection = serial.Serial(arduino_port, 115200, timeout=.1)
+            time.sleep(1)
             return True
         except serial.SerialException as e:
             print('Cannot connect to device %s %s', arduino_port, e)
 
     def send_to_aruduino(self, type_name, data, set_type_name_ending=True):
+        self.connection: serial.Serial
         self.connection.write(type_name.encode())
 
         if type(data) is int:
@@ -139,26 +146,26 @@ class Main:
 
 
 if __name__ == "__main__":
-    main = Main()
-    main.get_stats()
-    main.get_time()
-    main.get_os_specific_stats()
-    main.get_gpu_stats()
+    metric = PCMetric()
+    metric.get_cpu_mem_stats()
+    metric.get_time()
+    metric.get_os_specific_stats()
+    metric.get_gpu_stats()
 
     print("Starting up...\r\n")
 
-    print("Cpu have: {} cores".format(main.cpu_count_real))
-    print("Cpu have: {}  threads".format(main.cpu_count))
-    print("Memory " + main.mem_stats)
-    print("Cpu " + main.trimmed_stats)
-    print("Current time " + main.current_time)
-    print("Uptime " + main.uptime)
-    print("Day " + main.day)
+    print("Cpu have: {} cores".format(metric.cpu_count_real))
+    print("Cpu have: {}  threads".format(metric.cpu_count))
+    print("Memory " + metric.mem_stats)
+    print("Cpu " + metric.trimmed_stats)
+    print("Current time " + metric.current_time)
+    print("Uptime " + metric.uptime)
+    print("Day " + metric.day)
 
-    if len(main.gpu_devices) != 0:
-        for device in main.gpu_devices:
-            print("")
-            print(device.adapterIndex + ": " + device.device_name)
+    if len(metric.gpu_devices):
+        print('\n', "Showing video adapters info:")
+        for index, device in enumerate(metric.gpu_devices):
+            print(str(index) + ": " + device.device_name)
             print("Fan load: " + device.fan_speed_percent)
             print("Fan rpm: " + device.fan_speed_rpm)
             print("Engine clock: " + device.eng_clock)
@@ -168,19 +175,25 @@ if __name__ == "__main__":
 
     print("\r\n Sending information to device...")
 
-    if main.connect():
-    # main.send_to_aruduino('cpu_cont', main.cpu_count_real)
-    # main.send_to_aruduino('cpu_real', main.cpu_count)
-
+    if metric.connect():
         while True:
-            main.get_stats()
-            main.get_time()
-            main.get_gpu_stats()
-            main.send_to_aruduino('cpu_stat', main.trimmed_stats)
-            main.send_to_aruduino('mem_stat', main.mem_stats)
-            main.send_to_aruduino('current_time', main.current_time)
-            main.send_to_aruduino('uptime', main.uptime)
-            main.send_to_aruduino('curr_day', main.day)
+            metric.get_cpu_mem_stats()
+            metric.get_time()
+            metric.get_gpu_stats()
 
-            print(main.connection.readall())
+            metric.send_to_aruduino('cpu_stat', metric.trimmed_stats)
+            metric.send_to_aruduino('cpu_count', str(metric.cpu_count_real))
+            metric.send_to_aruduino('cpu_real', str(metric.cpu_count))
+            metric.send_to_aruduino('va_count', str(len(metric.gpu_devices)))  # video adapters count
+            metric.send_to_aruduino('mem_stat', metric.mem_stats)
+            metric.send_to_aruduino('current_time', metric.current_time)
+            metric.send_to_aruduino('uptime', metric.uptime)
+            metric.send_to_aruduino('curr_day', metric.day)
+
+            va_device: GpuDevice
+            for index, va_device in enumerate(metric.gpu_devices):
+                metric.send_to_aruduino('va' + str(index), va_device.format(index))
+
+            print(metric.connection.readall())
             time.sleep(timeout_send)
+
