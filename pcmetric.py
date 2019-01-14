@@ -1,5 +1,4 @@
 from datetime import datetime
-import pyspectator
 import sys
 import psutil
 import serial
