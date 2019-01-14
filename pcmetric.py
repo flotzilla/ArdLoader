@@ -1,4 +1,5 @@
 from datetime import datetime
+import pyspectator
 import sys
 import psutil
 import serial
@@ -12,13 +13,17 @@ if platform.system() == 'Windows':
     import wmi
 
 serial_port = 'COM11'  # change it to your /dev/ttyACM[port] or /dev/ttyUSB[port] for linux or COM[port] for windows
-timeout_readings = 1  # fix this
-timeout_send = .9  # optimal usage of delay for sending to serial port
+timeout_readings = 1
+timeout_send = .3
 time_format = "%H:%M %d/%m/%Y"
 
 amd_names = ['AMD', 'Advanced micro devices', 'Advanced Micro Devices, Inc.', 'Radeon']
 nvidia_names = ['Nvidia']
 intel_names = ['Intel Corporation', 'Intel']
+
+# choose primary video card number under 'Showing video adapters info' line to display gpu stats on main screen
+# set `primary_gpu = -1` to turn of this feature
+primary_gpu = 0
 
 
 class PCMetric:
@@ -39,14 +44,20 @@ class PCMetric:
         self.video_controllers_count = 0
 
     @staticmethod
-    def convert_size(size_bytes):
+    def convert_size(size_bytes, with_prefix=True):
         if size_bytes == 0:
-            return "0B"
+            if with_prefix:
+                return "0B"
+            else:
+                return 0
         size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
         i = int(math.floor(math.log(size_bytes, 1024)))
         p = math.pow(1024, i)
-        s = round(size_bytes / p, 2)
-        return "%s%s" % (s, size_name[i])
+        s = round(size_bytes / p, 1)
+        if with_prefix:
+            return "%s%s" % (s, size_name[i])
+        else:
+            return str(s)
 
     def get_cpu_mem_stats(self):
         self.trimmed_stats = ""
@@ -54,14 +65,14 @@ class PCMetric:
         for stat in cpu_stats:
             self.trimmed_stats += str(int(stat)) + ","
 
-        average = round(sum(cpu_stats) / float(len(cpu_stats)), 2)
+        average = int(sum(cpu_stats) / float(len(cpu_stats)))
         self.trimmed_stats += str(average) + "%"
 
         mem_stats = psutil.virtual_memory()
         self.mem_stats = PCMetric.convert_size(mem_stats.total) + "," \
-                         + PCMetric.convert_size(mem_stats.used) + "," \
+                         + PCMetric.convert_size(mem_stats.used, with_prefix=False) + "," \
                          + PCMetric.convert_size(mem_stats.free) + "," \
-                         + str(round(mem_stats.percent, 2)) + "%"
+                         + str(int(mem_stats.percent)) + "%"
 
     def get_os_specific_stats(self):
         if platform.system() == 'Windows':
@@ -101,6 +112,7 @@ class PCMetric:
                 print(sys.exc_info())
 
         else:
+            # nix systems only
             sensors = psutil.sensors_temperatures()
             cpu_fan = psutil.sensors_fans()
             pass
@@ -141,7 +153,7 @@ class PCMetric:
     def get_time(self):
         self.current_time = time.strftime(time_format, time.localtime(time.time()))
         self.uptime = str(datetime.strptime(self.current_time, time_format) \
-                          - datetime.strptime(self.startup_time, time_format))
+                          - datetime.strptime(self.startup_time, time_format))[:-3]
         self.day = str(time.strftime('%a', time.localtime(time.time())))
 
 
@@ -154,13 +166,15 @@ if __name__ == "__main__":
 
     print("Starting up...\r\n")
 
+    print("Initial info:")
     print("Cpu have: {} cores".format(metric.cpu_count_real))
     print("Cpu have: {}  threads".format(metric.cpu_count))
-    print("Memory " + metric.mem_stats)
-    print("Cpu " + metric.trimmed_stats)
-    print("Current time " + metric.current_time)
-    print("Uptime " + metric.uptime)
-    print("Day " + metric.day)
+    print("Memory load:", metric.mem_stats)
+    print("Cpu load:", metric.trimmed_stats)
+    print("Current time:", metric.current_time)
+    print("Uptime:", metric.uptime)
+    print("Day:", metric.day)
+    print("Primary GPU:", primary_gpu)
 
     if len(metric.gpu_devices):
         print('\n', "Showing video adapters info:")
@@ -173,7 +187,7 @@ if __name__ == "__main__":
             print("Temperature: " + device.currtemp)
             print("Usage: " + device.usage)
 
-    print("\r\n Sending information to device...")
+    print("\r\n Sending information to device", serial_port)
 
     if metric.connect():
         while True:
@@ -185,6 +199,7 @@ if __name__ == "__main__":
             metric.send_via_serial('cpu_count', str(metric.cpu_count_real))
             metric.send_via_serial('cpu_real', str(metric.cpu_count))
             metric.send_via_serial('va_count', str(len(metric.gpu_devices)))  # video adapters count
+            metric.send_via_serial('prim_gpu', str(primary_gpu))
             metric.send_via_serial('mem_stat', metric.mem_stats)
             metric.send_via_serial('current_time', metric.current_time)
             metric.send_via_serial('uptime', metric.uptime)
@@ -194,6 +209,6 @@ if __name__ == "__main__":
             for index, va_device in enumerate(metric.gpu_devices):
                 metric.send_via_serial('va' + str(index), va_device.format(index))
 
-            print(metric.connection.readall())
+            # print(metric.connection.readall())
             time.sleep(timeout_send)
 
