@@ -11,7 +11,7 @@ from gpu.GpuDevice import GpuDevice
 if platform.system() == 'Windows':
     import wmi
 
-arduino_port = 'COM11'  # change it to your /dev/ttyACM[port] or /dev/ttyUSB[port] for linux or COM[port] for windows
+serial_port = 'COM11'  # change it to your /dev/ttyACM[port] or /dev/ttyUSB[port] for linux or COM[port] for windows
 timeout_readings = 1  # fix this
 timeout_send = .9  # optimal usage of delay for sending to serial port
 time_format = "%H:%M %d/%m/%Y"
@@ -119,13 +119,13 @@ class PCMetric:
 
     def connect(self):
         try:
-            self.connection = serial.Serial(arduino_port, 115200, timeout=.1)
+            self.connection = serial.Serial(serial_port, 115200, timeout=.1)
             time.sleep(1)
             return True
         except serial.SerialException as e:
-            print('Cannot connect to device %s %s', arduino_port, e)
+            print('Cannot connect to device %s %s', serial_port, e)
 
-    def send_to_aruduino(self, type_name, data, set_type_name_ending=True):
+    def send_via_serial(self, type_name, data, set_type_name_ending=True):
         self.connection: serial.Serial
         self.connection.write(type_name.encode())
 
@@ -181,18 +181,18 @@ if __name__ == "__main__":
             metric.get_time()
             metric.get_gpu_stats()
 
-            metric.send_to_aruduino('cpu_stat', metric.trimmed_stats)
-            metric.send_to_aruduino('cpu_count', str(metric.cpu_count_real))
-            metric.send_to_aruduino('cpu_real', str(metric.cpu_count))
-            metric.send_to_aruduino('va_count', str(len(metric.gpu_devices)))  # video adapters count
-            metric.send_to_aruduino('mem_stat', metric.mem_stats)
-            metric.send_to_aruduino('current_time', metric.current_time)
-            metric.send_to_aruduino('uptime', metric.uptime)
-            metric.send_to_aruduino('curr_day', metric.day)
+            metric.send_via_serial('cpu_stat', metric.trimmed_stats)
+            metric.send_via_serial('cpu_count', str(metric.cpu_count_real))
+            metric.send_via_serial('cpu_real', str(metric.cpu_count))
+            metric.send_via_serial('va_count', str(len(metric.gpu_devices)))  # video adapters count
+            metric.send_via_serial('mem_stat', metric.mem_stats)
+            metric.send_via_serial('current_time', metric.current_time)
+            metric.send_via_serial('uptime', metric.uptime)
+            metric.send_via_serial('curr_day', metric.day)
 
             va_device: GpuDevice
             for index, va_device in enumerate(metric.gpu_devices):
-                metric.send_to_aruduino('va' + str(index), va_device.format(index))
+                metric.send_via_serial('va' + str(index), va_device.format(index))
 
             print(metric.connection.readall())
             time.sleep(timeout_send)
