@@ -190,24 +190,29 @@ if __name__ == "__main__":
 
     if metric.connect():
         while True:
-            metric.get_cpu_mem_stats()
-            metric.get_time()
-            metric.get_gpu_stats()
+            try:
+                metric.get_cpu_mem_stats()
+                metric.get_time()
+                metric.get_gpu_stats()
 
-            metric.send_via_serial('cpu_stat', metric.trimmed_stats)
-            metric.send_via_serial('cpu_count', str(metric.cpu_count_real))
-            metric.send_via_serial('cpu_real', str(metric.cpu_count))
-            metric.send_via_serial('va_count', str(len(metric.gpu_devices)))  # video adapters count
-            metric.send_via_serial('prim_gpu', str(primary_gpu))
-            metric.send_via_serial('mem_stat', metric.mem_stats)
-            metric.send_via_serial('current_time', metric.current_time)
-            metric.send_via_serial('uptime', metric.uptime)
-            metric.send_via_serial('curr_day', metric.day)
+                metric.send_via_serial('cpu_stat', metric.trimmed_stats)
+                metric.send_via_serial('cpu_count', str(metric.cpu_count_real))
+                metric.send_via_serial('cpu_real', str(metric.cpu_count))
+                metric.send_via_serial('va_count', str(len(metric.gpu_devices)))  # video adapters count
+                metric.send_via_serial('prim_gpu', str(primary_gpu))
+                metric.send_via_serial('mem_stat', metric.mem_stats)
+                metric.send_via_serial('current_time', metric.current_time)
+                metric.send_via_serial('uptime', metric.uptime)
+                metric.send_via_serial('curr_day', metric.day)
 
-            va_device: GpuDevice
-            for index, va_device in enumerate(metric.gpu_devices):
-                metric.send_via_serial('va' + str(index), va_device.format(index))
+                va_device: GpuDevice
+                for index, va_device in enumerate(metric.gpu_devices):
+                    metric.send_via_serial('va' + str(index), va_device.format(index))
 
-            # print(metric.connection.readall())
-            time.sleep(timeout_send)
+                print(metric.connection.readall())
+                time.sleep(timeout_send)
+            except serial.SerialException as se:
+                print("Serial port writing error", se)
+            except Exception as e:
+                print(e)
 
