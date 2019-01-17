@@ -4,11 +4,11 @@
 * add changing screens support for multiple videocards [DONE]
 * splash screen for videocard select [DONE]
 * refract video screen [DONE]
-* add multithreading
-* add full support for nvidia video cards
+* add multithreading [?]
 * add full support for nvidia video cards
 * update readme to readable state
 * add screenshots
+* add port sending via console run
 
 AedLoad
 * update readme with photos

@@ -209,8 +209,11 @@ if __name__ == "__main__":
                 for index, va_device in enumerate(metric.gpu_devices):
                     metric.send_via_serial('va' + str(index), va_device.format(index))
 
-                print(metric.connection.readall())
+                # print(metric.connection.readall())
                 time.sleep(timeout_send)
+            except KeyboardInterrupt as ke:
+                print('\r\n', 'done')
+                sys.exit(1)
             except serial.SerialException as se:
                 print("Serial port writing error", se)
             except Exception as e:
