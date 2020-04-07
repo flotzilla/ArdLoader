@@ -16,9 +16,11 @@ Device example: [Arduino project](https://github.com/flotzilla/WminiLoad) for di
 
 ## Screenshots
 ![console_init](https://user-images.githubusercontent.com/3332506/78721597-82ea3680-7930-11ea-93f8-671dab2160fc.png)
+
 Console stats
 
 ![stats_image](https://user-images.githubusercontent.com/3332506/78722081-70bcc800-7931-11ea-81a5-37a7e3a127c5.jpg)
+
 Device
 
 ## Requirements
