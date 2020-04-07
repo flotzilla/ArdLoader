@@ -6,11 +6,11 @@
 * refract video screen [DONE]
 * add multithreading [?]
 * add full support for nvidia video cards
-* update readme to readable state
+* update readme to readable state [DONE]
 * add screenshots
-* add port sending via console run
+* add port sending via console run [DONE]
 
-AedLoad
+ArdLoad
 * update readme with photos
 * add connection scheme
 * remove screen flickering on update
