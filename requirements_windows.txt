@@ -1,5 +1,6 @@
 pyserial
 psutil
+tabulate
 
 pypiwin32
 wmi

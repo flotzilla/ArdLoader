@@ -1,4 +1,4 @@
 pyserial
 psutil
-
 pyadl
+tabulate
