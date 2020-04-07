@@ -106,8 +106,8 @@ class PCMetric:
 
         else:
             # nix systems only
-            sensors = psutil.sensors_temperatures()
-            cpu_fan = psutil.sensors_fans()
+            self.sensors = psutil.sensors_temperatures()
+            self.cpu_fan = psutil.sensors_fans()
             pass
 
     def get_gpu_stats(self):
