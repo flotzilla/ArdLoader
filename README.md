@@ -11,7 +11,7 @@ Device: [Arduino based project](https://github.com/flotzilla/WminiLoad) for disp
 
 ## Current status
 * show cpu and mem load
-* supports AMD video cards on Windows system
+* support AMD video cards on Windows system (simply don't have any Nvidia card)
 
 ## Screenshots
 
