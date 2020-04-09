@@ -8,9 +8,6 @@ import time
 import config as conf
 import PcMetric
 
-hwid = conf.hwid
-serial_port = conf.serial_port
-
 
 def detect_port_by_hwid(hardware_id):
     ports = list(serial.tools.list_ports.comports())
@@ -22,6 +19,9 @@ def detect_port_by_hwid(hardware_id):
 
 
 if __name__ == "__main__":
+    hwid = conf.hwid
+    serial_port = conf.serial_port
+
     if detect_port_by_hwid(hwid) is not None:
         serial_port = detect_port_by_hwid(hwid)
 
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     ))
 
     if len(metric.gpu_devices):
-        print('\n', "Showing video adapters info:")
+        print("Showing video adapters info:")
         for index, device in enumerate(metric.gpu_devices):
             print(tabulate(
                 [
