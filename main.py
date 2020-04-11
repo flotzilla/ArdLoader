@@ -92,3 +92,5 @@ if __name__ == "__main__":
                 print("Serial port writing error", se)
             except Exception as e:
                 print(e)
+    else:
+        print("Unable to connect", metric.port)
