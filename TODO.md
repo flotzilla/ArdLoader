@@ -3,11 +3,11 @@
 * add awaiting for connect logo option after 10sec idle [DONE]
 * add changing screens support for multiple videocards [DONE]
 * splash screen for videocard select [DONE]
-* refract video screen [DONE]
+* refactoring of video screens [DONE]
 * add multithreading [?]
 * add full support for nvidia video cards
 * update readme to readable state [DONE]
-* add screenshots
+* add screenshots [DONE]
 * add port sending via console run [DONE]
 
 ArdLoad
